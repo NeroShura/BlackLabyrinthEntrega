@@ -2,12 +2,11 @@ CREATE DATABASE laberinto;
 
 USE laberinto;
 
-CREATE TABLE record (
-    id INT PRIMARY KEY,
-    tiempo_ms BIGINT NOT NULL,
-    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ON UPDATE CURRENT_TIMESTAMP
-);
+CREATE TABLE IF NOT EXISTS ranking (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, 
+        nombre TEXT NOT NULL UNIQUE, 
+        tiempo_ms INTEGER NOT NULL, 
+        fecha TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)
 
-INSERT INTO record (id, tiempo_ms)
-VALUES (1, 0);
+INSERT INTO ranking (nombre, tiempo_ms, fecha) 
+        VALUES ("Ian", 00:29:50, datetime('now', 'localtime'))
