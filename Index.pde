@@ -1,4 +1,3 @@
-
 Mapa mapa;
 Jugador jugador;
 Jugador avatarVista;
@@ -38,6 +37,10 @@ int duracionPantallaFinal = 3000;
 int[] indicesColores = {0, 0, 0, 0};
 
 boolean tiempoRegistrado = false;
+boolean nuevoRecordPersonal = false;
+
+String nombreJugador = "";
+ArrayList<RegistroRanking> topRanking = new ArrayList<RegistroRanking>();
 
 color colorRemera = #2850B4;
 color colorPantalon = #1E1E1E;
@@ -84,7 +87,8 @@ void setup() {
   baseDatos = new BaseDatos();
 
   if (baseDatos.conectar()) {
-    mejorTiempo = baseDatos.obtenerRecord();
+    mejorTiempo = baseDatos.obtenerMejorRecord();
+    topRanking = baseDatos.obtenerTop(10);
   }
 }
 
@@ -110,6 +114,7 @@ void iniciarJuego() {
   tiempoInicio = millis();
   tiempoFinal = 0;
   tiempoRegistrado = false;
+  nuevoRecordPersonal = false;
 }
 
 
@@ -192,6 +197,16 @@ void draw() {
     dibujarHistoria();
     return;
   }
+
+  if (pantalla == 6) {
+    dibujarIngresoNombre();
+    return;
+  }
+
+  if (pantalla == 7) {
+    dibujarRanking();
+    return;
+  }
 }
 
 
@@ -206,21 +221,22 @@ void dibujarMenu() {
 
   fill(255);
   textAlign(CENTER, CENTER);
-  textSize(28);
+  textSize(24);
 
-  text("JUGAR", width / 2, 380);
-  text("PERSONALIZAR", width / 2, 430);
-  text("CONTROLES", width / 2, 480);
-  text("SALIR", width / 2, 530);
+  text("JUGAR", width / 2, 355);
+  text("PERSONALIZAR", width / 2, 400);
+  text("RANKING", width / 2, 445);
+  text("CONTROLES", width / 2, 490);
+  text("SALIR", width / 2, 535);
 
   noFill();
   stroke(255);
 
   rect(
     width / 2 - 130,
-    360 + opcionMenu * 50,
+    336 + opcionMenu * 45,
     260,
-    40
+    38
     );
 
   noStroke();
@@ -422,7 +438,104 @@ void dibujarHistoria() {
   textAlign(CENTER, CENTER);
   textSize(22);
 
-  text("PRESIONA ENTER PARA COMENZAR", width / 2, height - 30);
+  text("PRESIONA ENTER PARA CONTINUAR", width / 2, height - 30);
+
+  textAlign(LEFT, BASELINE);
+}
+
+
+// Pantalla para ingresar el nombre del jugador antes de iniciar.
+void dibujarIngresoNombre() {
+
+  background(15, 15, 25);
+
+  fill(255);
+  textAlign(CENTER, CENTER);
+
+  textSize(36);
+  text("INGRESA TU NOMBRE", width / 2, 160);
+
+  fill(35, 40, 60);
+  stroke(255);
+  strokeWeight(2);
+  rect(width / 2 - 180, 240, 360, 55, 8);
+  noStroke();
+  strokeWeight(1);
+
+  fill(255);
+  textSize(28);
+  String cursor = (millis() / 500) % 2 == 0 ? "_" : "";
+  text(nombreJugador + cursor, width / 2, 267);
+
+  fill(180);
+  textSize(17);
+  text("Escribe tu nombre (máx. 15 caracteres)", width / 2, 340);
+  text("ENTER para jugar   |   ESC para volver", width / 2, 480);
+
+  textAlign(LEFT, BASELINE);
+}
+
+
+// Muestra el Top 10 de jugadores ordenado por menor tiempo.
+void dibujarRanking() {
+
+  background(15, 15, 25);
+
+  fill(255);
+  textAlign(CENTER, CENTER);
+
+  textSize(38);
+  text("RANKING DE RÉCORDS", width / 2, 65);
+
+  if (topRanking.size() == 0) {
+
+    fill(180);
+    textSize(22);
+    text("Todavía no hay récords registrados", width / 2, height / 2);
+
+  } else {
+
+    textSize(18);
+    fill(150, 180, 255);
+    textAlign(LEFT, CENTER);
+    text("POS", 160, 125);
+    text("JUGADOR", 240, 125);
+    textAlign(RIGHT, CENTER);
+    text("TIEMPO", 640, 125);
+
+    stroke(80);
+    line(150, 145, 650, 145);
+    noStroke();
+
+    for (int i = 0; i < topRanking.size(); i++) {
+
+      RegistroRanking r = topRanking.get(i);
+      float y = 175 + i * 34;
+
+      if (i == 0) {
+        fill(255, 215, 0);
+      } else if (i == 1) {
+        fill(210, 210, 220);
+      } else if (i == 2) {
+        fill(205, 135, 80);
+      } else {
+        fill(230);
+      }
+
+      textAlign(LEFT, CENTER);
+      textSize(20);
+      text("#" + r.posicion, 160, y);
+      text(r.nombre, 240, y);
+
+      textAlign(RIGHT, CENTER);
+      text(formatearTiempo(r.tiempoMs), 640, y);
+    }
+  }
+
+  fill(200);
+  textAlign(CENTER, CENTER);
+  textSize(18);
+  text("ESC para volver al menú", width / 2, 550);
 
   textAlign(LEFT, BASELINE);
 }
@@ -493,11 +606,12 @@ void jugar() {
 
     if (!tiempoRegistrado) {
 
-      if (baseDatos.guardarSiEsMenor(tiempoFinal)) {
+      nuevoRecordPersonal = baseDatos.registrarTiempo(nombreJugador, tiempoFinal);
+      mejorTiempo = baseDatos.obtenerMejorRecord();
+      topRanking = baseDatos.obtenerTop(10);
 
-        mejorTiempo = tiempoFinal;
-
-        println("¡Nuevo récord!");
+      if (nuevoRecordPersonal) {
+        println("¡Nuevo récord personal para " + nombreJugador + "!");
       }
 
       tiempoRegistrado = true;
@@ -515,12 +629,12 @@ void jugar() {
   fill(255);
   textSize(20);
 
-  text("Sala: (" + mapa.fila + ", " + mapa.columna + ")", 20, 30);
-
-  text("Tiempo: " + formatearTiempo(millis() - tiempoInicio), 20, 60);
+  text("Jugador: " + nombreJugador, 20, 30);
+  text("Sala: (" + mapa.fila + ", " + mapa.columna + ")", 20, 60);
+  text("Tiempo: " + formatearTiempo(millis() - tiempoInicio), 20, 90);
 
   if (mejorTiempo > 0) {
-    text("Récord: " + formatearTiempo(mejorTiempo), 20, 90);
+    text("Récord: " + formatearTiempo(mejorTiempo), 20, 120);
   }
 }
 
@@ -575,34 +689,42 @@ void dibujarVictoria() {
   textAlign(CENTER, CENTER);
   textSize(70);
 
-  text("¡VICTORIA!", width / 2, height / 2 - 100);
+  text("¡VICTORIA!", width / 2, height / 2 - 110);
 
   fill(255);
   textSize(24);
 
-  text("Encontraste la salida", width / 2, height / 2 - 35);
+  text("Encontraste la salida, " + nombreJugador, width / 2, height / 2 - 45);
 
   textSize(22);
 
   text(
     "Tu tiempo: " + formatearTiempo(tiempoFinal),
     width / 2,
-    height / 2 + 15
+    height / 2 + 5
     );
+
+  if (nuevoRecordPersonal) {
+    fill(255, 215, 0);
+    textSize(19);
+    text("¡Nuevo récord personal guardado!", width / 2, height / 2 + 40);
+    fill(255);
+    textSize(22);
+  }
 
   if (mejorTiempo > 0) {
 
     text(
-      "Récord: " + formatearTiempo(mejorTiempo),
+      "Récord general: " + formatearTiempo(mejorTiempo),
       width / 2,
-      height / 2 + 55
+      height / 2 + 75
       );
   }
 
   fill(180);
   textSize(18);
 
-  text("Volviendo al menú...", width / 2, height / 2 + 110);
+  text("Volviendo al menú...", width / 2, height / 2 + 125);
 
   textAlign(LEFT, BASELINE);
 }
@@ -610,6 +732,40 @@ void dibujarVictoria() {
 
 // Procesa las teclas presionadas para navegar por los menús y controlar el juego.
 void keyPressed() {
+
+  if (pantalla == 6) {
+
+    if (keyCode == ESC) {
+      key = 0;
+      pantalla = 5;
+      return;
+    }
+
+    if (keyCode == BACKSPACE) {
+      if (nombreJugador.length() > 0) {
+        nombreJugador = nombreJugador.substring(0, nombreJugador.length() - 1);
+      }
+      return;
+    }
+
+    if (keyCode == ENTER || keyCode == RETURN) {
+      if (nombreJugador.trim().isEmpty()) {
+        nombreJugador = "Jugador";
+      } else {
+        nombreJugador = nombreJugador.trim();
+      }
+      iniciarJuego();
+      pantalla = 3;
+      return;
+    }
+
+    if (key != CODED && key >= 32 && key <= 126 && nombreJugador.length() < 15) {
+      nombreJugador += key;
+    }
+
+    return;
+  }
+
 
   if (key == 'w' || key == 'W') arribaPresionada = true;
   if (key == 's' || key == 'S') abajoPresionada = true;
@@ -631,7 +787,7 @@ void keyPressed() {
       opcionMenu--;
 
       if (opcionMenu < 0) {
-        opcionMenu = 3;
+        opcionMenu = 4;
       }
     }
 
@@ -639,7 +795,7 @@ void keyPressed() {
 
       opcionMenu++;
 
-      if (opcionMenu > 3) {
+      if (opcionMenu > 4) {
         opcionMenu = 0;
       }
     }
@@ -655,10 +811,16 @@ void keyPressed() {
       }
 
       if (opcionMenu == 2) {
-        pantalla = 4;
+        topRanking = baseDatos.obtenerTop(10);
+        pantalla = 7;
       }
 
       if (opcionMenu == 3) {
+        pantalla = 4;
+      }
+
+      if (opcionMenu == 4) {
+        baseDatos.cerrar();
         exit();
       }
     }
@@ -766,7 +928,7 @@ void keyPressed() {
   }
 
 
-  if (pantalla == 4) {
+  if (pantalla == 4 || pantalla == 7) {
 
     if (keyCode == ESC) {
 
@@ -782,9 +944,7 @@ void keyPressed() {
 
     if (keyCode == ENTER || keyCode == RETURN) {
 
-      iniciarJuego();
-
-      pantalla = 3;
+      pantalla = 6;
     }
 
     if (keyCode == ESC) {
